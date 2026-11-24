@@ -140,3 +140,7 @@ encrypted borg repository (BorgBase by default). See `services/borgmatic/*.examp
 ## Scripts
 
 - `scripts/setup-swapfile.sh`: adds a swap file on the root filesystem (run with sudo).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
