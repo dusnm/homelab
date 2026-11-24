@@ -127,8 +127,8 @@ Hardware and extra mounts go in `$DATA_ROOT/<service>/compose.override.yml`. Exa
 
 ## music-importer
 
-Built from its own project (`MUSIC_IMPORTER_SRC` in `$DATA_ROOT/music-importer/.env`: a local
-checkout or the git URL). It needs slskd's network, so start slskd first (`homelab up` does).
+Built from its own project, [music-importer](https://github.com/dusnm/music-importer)
+(`MUSIC_IMPORTER_SRC` in `$DATA_ROOT/music-importer/.env`: the git URL or a local checkout). It needs slskd's network, so start slskd first (`homelab up` does).
 Its command-line front end `mi` comes with that project.
 
 ## Backups

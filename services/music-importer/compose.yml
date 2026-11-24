@@ -1,5 +1,5 @@
 # music-importer: tags, names, cover art and lyrics for slskd downloads, inbox drops and
-# Bandcamp purchases (https://github.com/... see MUSIC_IMPORTER_SRC). Settings and secrets:
+# Bandcamp purchases (https://github.com/dusnm/music-importer). Settings and secrets:
 # $DATA_ROOT/music-importer/.env. CLI on the host: the project's bin/mi.
 services:
   music-importer:

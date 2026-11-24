@@ -1,6 +1,7 @@
 # Let's Encrypt wildcard certificate for $DOMAIN via Namecheap DNS (DNS-01), renewed on a
-# timer into $LETSENCRYPT_DIR, where nginx and AdGuard read it. Image source:
-# https://hub.docker.com/r/dusnm1/certbot-namecheap-dns-plugin. Namecheap credentials,
+# timer into $LETSENCRYPT_DIR, where nginx and AdGuard read it. Image:
+# https://hub.docker.com/r/dusnm1/certbot-namecheap-dns-plugin, source:
+# https://github.com/dusnm/certbot-dns-namecheap. Namecheap credentials,
 # your public IP (whitelisted in Namecheap's API settings) and the contact e-mail:
 # $DATA_ROOT/certbot-dns-namecheap/.env.
 services:
