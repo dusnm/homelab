@@ -1,0 +1,68 @@
+# Authelia configuration, templated: the env expressions below are filled from the container
+# environment (see compose.yml; X_AUTHELIA_CONFIG_FILTERS=template). Host names come from
+# homelab.env (DOMAIN, HOST_*). Users: $DATA_ROOT/authelia/config/users.yml
+# (create with add-user.sh); secrets: $DATA_ROOT/authelia/secrets/{jwt_secret,storage_encryption_key}.
+# Authelia 4.39 — single sign-on with 2FA for the subdomains of DOMAIN behind host nginx.
+# Docs: https://www.authelia.com/configuration/prologue/introduction/
+# Secrets come from files (see docker-compose.yml), never from this file.
+
+theme: auto
+
+server:
+  address: 'tcp://:9091/'
+
+log:
+  level: info
+
+totp:
+  issuer: '{{ env "DOMAIN" }}'
+
+webauthn:
+  display_name: '{{ env "DOMAIN" }}'
+
+authentication_backend:
+  password_reset:
+    disable: true            # single user; reset the hash in users.yml instead
+  file:
+    path: /config/users.yml
+    password:
+      algorithm: argon2
+
+access_control:
+  default_policy: deny       # anything not listed below is refused
+  rules:
+    # Browser apps, public behind 2FA.
+    - domain:
+        - '{{ env "HOST_HOME" }}'
+        - '{{ env "HOST_SLSKD" }}'
+        - '{{ env "HOST_DOWNLOAD" }}'   # MeTube
+      policy: two_factor
+    # Admin tools. Their mobile apps / API clients can't pass the login page.
+    - domain:
+        - '{{ env "HOST_DELUGE" }}'
+        - '{{ env "HOST_PROWLARR" }}'
+        - '{{ env "HOST_MONITOR" }}'    # Beszel
+      policy: two_factor
+
+session:
+  cookies:
+    - domain: '{{ env "DOMAIN" }}'
+      authelia_url: https://{{ env "HOST_AUTH" }}
+      default_redirection_url: https://{{ env "HOST_HOME" }}
+      inactivity: 1 hour
+      expiration: 12 hours
+      remember_me: 1 month
+
+regulation:                  # brute-force protection
+  max_retries: 3
+  find_time: 10 minutes
+  ban_time: 1 hour
+
+storage:
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  # No mail server: one-time codes (e.g. when registering 2FA) are written here.
+  filesystem:
+    filename: /config/notification.txt

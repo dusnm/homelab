@@ -1,0 +1,15 @@
+# SMBv1 share for PlayStation 2 OPL (Open PS2 Loader). smb.conf: $DATA_ROOT/ps2smb/data/smb.conf
+# (start from smb.conf.example). SMBv1 is insecure: keep this LAN-only.
+services:
+  samba:
+    container_name: smbv1ps2
+    image: jfryman/emu-smb:latest
+    restart: unless-stopped
+    ports:
+      - "137:137/udp"
+      - "138:138/udp"
+      - "139:139/tcp"
+      - "445:445/tcp"
+    volumes:
+      - ${DATA_ROOT}/ps2smb/data/smb.conf:/etc/samba/smb.conf
+      - ${MEDIA_ROOT}/games/ps2:/srv/ps2

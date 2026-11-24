@@ -1,0 +1,10 @@
+# Cloudflare Tunnel. The tunnel token goes in $DATA_ROOT/cloudflared/.env (TUNNEL_TOKEN).
+services:
+  cloudflared:
+    container_name: cloudflared-tunnel
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    network_mode: host
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}

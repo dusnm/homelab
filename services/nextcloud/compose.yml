@@ -1,0 +1,52 @@
+# Nextcloud with MariaDB and Redict. Passwords and the admin user: $DATA_ROOT/nextcloud/.env.
+# Files live in $NEXTCLOUD_ROOT (mounted as /var/www/html).
+services:
+  db:
+    container_name: nextcloud-db
+    image: "mariadb:12.3"
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW --innodb-log-file-size=128M --slow-query-log=ON --long-query-time=2 --slow-query-log-file=slow.log
+    volumes:
+      - "db:/var/lib/mysql"
+    environment:
+      - MARIADB_AUTO_UPGRADE=1
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+  cache:
+    container_name: nextcloud-cache
+    image: "registry.redict.io/redict:alpine"
+    restart: unless-stopped
+    volumes:
+      - "cache:/data"
+  app:
+    container_name: nextcloud
+    image: "nextcloud:35-apache"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6080:80"
+    links:
+      - db
+      - cache
+    volumes:
+      - ${NEXTCLOUD_ROOT}:/var/www/html
+    environment:
+      - PHP_MEMORY_LIMIT=512M
+      - PHP_UPLOAD_LIMIT=10G
+      - APACHE_BODY_LIMIT=10737418240 # 10GiB
+      - REDIS_HOST=cache
+      - REDIS_PORT=6379
+      - MYSQL_HOST=db
+      - MYSQL_USER=nextcloud
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - TRUSTED_PROXIES=127.0.0.0/8 ${LAN_SUBNET} 172.17.0.1/16
+      - OVERWRITEHOST=${HOST_CLOUD}
+      - OVERWRITEPROTOCOL=https
+      - NEXTCLOUD_TRUSTED_DOMAINS=${HOST_CLOUD}
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+volumes:
+  db:
+  cache:

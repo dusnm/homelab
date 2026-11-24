@@ -1,0 +1,228 @@
+#!/bin/bash
+# Run the homelab's docker-compose services from this repo.
+#
+#   homelab up [SERVICE...] [-- COMPOSE-ARGS]   start (all enabled services when none given)
+#   homelab down|restart|pull|ps|logs [SERVICE...]
+#   homelab build SERVICE...                    rebuild images built from source
+#   homelab config SERVICE                      the fully rendered compose config
+#   homelab check                               validate every service's compose file
+#   homelab compose SERVICE ARGS...             any docker-compose command for one service
+#   homelab list                                services, enabled or not, running or not
+#   homelab nginx render [DIR]                  render nginx/ templates (default: ./build/nginx)
+#   homelab nginx install                       render and install into /etc/nginx (needs sudo)
+#   homelab env                                 the settings in effect (no secrets)
+#
+# Settings come from homelab.env next to the repo's README (or $HOMELAB_ENV); each service's
+# secrets from $DATA_ROOT/<service>/.env, read by docker-compose itself (--env-file), and
+# machine-specific additions from $DATA_ROOT/<service>/compose.override.yml when present.
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+ENV_FILE="${HOMELAB_ENV:-$REPO/homelab.env}"
+# Start order: shared networks and databases first, things that join their networks last.
+LATE=(music-importer borgmatic)
+HOSTS=(AUTH:auth HOME:homer MUSIC:music PHOTOS:photos CLOUD:cloud DOCS:docs RECIPES:recipes
+       TASKS:tasks SEARCH:search PASTE:paste OFFICE:office MACROS:macros DNS:dns
+       MONITOR:monitor DOWNLOAD:download SLSKD:slskd DELUGE:deluge PROWLARR:prowlarr)
+SHARED_NETWORKS=(downloads)   # created here; services declare them external
+
+error() { echo "homelab: $*" >&2; exit 1; }
+
+load_settings() {
+    [[ -f "$ENV_FILE" ]] || error "no settings file: $ENV_FILE (copy homelab.env.example)"
+    local line key value n=0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        n=$((n + 1))
+        [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
+        [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] \
+            || error "$ENV_FILE:$n: expected KEY=value"
+        key="${BASH_REMATCH[1]}"
+        value="${BASH_REMATCH[2]}"
+        value="$(sed -E 's/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//' <<<"$value")"
+        if [[ "$value" =~ ^\"(.*)\"$ || "$value" =~ ^\'(.*)\'$ ]]; then
+            value="${BASH_REMATCH[1]}"
+        fi
+        export "$key=$value"
+    done < "$ENV_FILE"
+    local required
+    for required in DOMAIN TZ PUID PGID DATA_ROOT MEDIA_ROOT; do
+        [[ -n "${!required:-}" ]] || error "$ENV_FILE: $required is not set"
+    done
+    : "${NEXTCLOUD_ROOT:=$DATA_ROOT/nextcloud/html}"
+    : "${LETSENCRYPT_DIR:=/etc/letsencrypt}"
+    : "${LAN_SUBNET:=192.168.0.0/16}"
+    export NEXTCLOUD_ROOT LETSENCRYPT_DIR LAN_SUBNET REPO
+    local pair var sub
+    for pair in "${HOSTS[@]}"; do
+        var="HOST_${pair%%:*}"
+        sub="${pair#*:}"
+        [[ -n "${!var:-}" ]] || export "$var=$sub.$DOMAIN"
+    done
+}
+
+all_services() {
+    local d
+    for d in "$REPO"/services/*/; do
+        d="${d%/}"
+        [[ -f "$d/compose.yml" ]] && basename "$d"
+    done
+}
+
+is_service() { [[ -f "$REPO/services/$1/compose.yml" ]]; }
+
+# Enabled services in start order.
+enabled_services() {
+    local list=() s late
+    if [[ -n "${SERVICES:-}" ]]; then
+        read -ra list <<<"$SERVICES"
+    else
+        mapfile -t list < <(all_services)
+    fi
+    for s in "${list[@]}"; do
+        is_service "$s" || error "SERVICES: unknown service $s"
+        for late in "${LATE[@]}"; do [[ "$s" == "$late" ]] && continue 2; done
+        echo "$s"
+    done
+    for late in "${LATE[@]}"; do
+        for s in "${list[@]}"; do [[ "$s" == "$late" ]] && echo "$s"; done
+    done
+}
+
+compose() {
+    local svc="$1"; shift
+    is_service "$svc" || error "unknown service: $svc (homelab list)"
+    local args=(-p "$svc" --project-directory "$REPO/services/$svc" -f "$REPO/services/$svc/compose.yml")
+    # Machine-specific additions (devices, extra mounts) live next to the data, not in the repo.
+    local override="$DATA_ROOT/$svc/compose.override.yml"
+    [[ -f "$override" ]] && args+=(-f "$override")
+    local secrets="$DATA_ROOT/$svc/.env"
+    # Without its own .env, give compose an empty one so a stray .env in the repo is never used.
+    if [[ -f "$secrets" ]]; then
+        args+=(--env-file "$secrets")
+    else
+        mkdir -p "$REPO/build" && : > "$REPO/build/empty.env"
+        args+=(--env-file "$REPO/build/empty.env")
+    fi
+    docker-compose "${args[@]}" "$@"
+}
+
+ensure_networks() {
+    local net
+    for net in "${SHARED_NETWORKS[@]}"; do
+        docker network inspect "$net" >/dev/null 2>&1 || docker network create "$net" >/dev/null
+    done
+}
+
+# Split "SERVICE... [-- ARGS]" into the services (default: all enabled) and extra args.
+targets() {
+    TARGETS=()
+    EXTRA=()
+    while [[ $# -gt 0 ]]; do
+        if [[ "$1" == "--" ]]; then shift; EXTRA=("$@"); break; fi
+        TARGETS+=("$1"); shift
+    done
+    if [[ ${#TARGETS[@]} -eq 0 ]]; then mapfile -t TARGETS < <(enabled_services); fi
+}
+
+render_nginx() {
+    local out="${1:-$REPO/build/nginx}" f vars="" pair
+    command -v envsubst >/dev/null || error "envsubst is missing (package gettext-base)"
+    for pair in DOMAIN LETSENCRYPT_DIR LAN_SUBNET; do vars+="\${$pair} "; done
+    for pair in "${HOSTS[@]}"; do vars+="\${HOST_${pair%%:*}} "; done
+    rm -rf "$out"
+    mkdir -p "$out/sites-available" "$out/snippets"
+    for f in "$REPO"/nginx/sites/*.conf; do
+        envsubst "$vars" < "$f" > "$out/sites-available/$(basename "$f")"
+    done
+    for f in "$REPO"/nginx/snippets/*.conf; do
+        envsubst "$vars" < "$f" > "$out/snippets/$(basename "$f")"
+    done
+    echo "$out"
+}
+
+usage() { sed -n '2,/^$/{s/^# \{0,1\}//p}' "${BASH_SOURCE[0]}"; }
+
+cmd="${1:-help}"
+[[ $# -gt 0 ]] && shift
+case "$cmd" in
+    help|-h|--help) usage; exit 0 ;;
+esac
+load_settings
+
+case "$cmd" in
+    up)
+        targets "$@"
+        ensure_networks
+        for s in "${TARGETS[@]}"; do echo "== $s"; compose "$s" up -d "${EXTRA[@]}"; done
+        ;;
+    down)
+        targets "$@"
+        # Reverse order: things that join other services' networks go first.
+        for (( i=${#TARGETS[@]}-1; i>=0; i-- )); do echo "== ${TARGETS[i]}"; compose "${TARGETS[i]}" down "${EXTRA[@]}"; done
+        ;;
+    restart|pull|ps)
+        targets "$@"
+        for s in "${TARGETS[@]}"; do echo "== $s"; compose "$s" "$cmd" "${EXTRA[@]}"; done
+        ;;
+    logs)
+        targets "$@"
+        [[ ${#TARGETS[@]} -eq 1 ]] || error "logs: name one service"
+        compose "${TARGETS[0]}" logs --tail 100 "${EXTRA[@]}"
+        ;;
+    build)
+        [[ $# -gt 0 ]] || error "build: name the service(s)"
+        targets "$@"
+        for s in "${TARGETS[@]}"; do echo "== $s"; compose "$s" build "${EXTRA[@]}"; done
+        ;;
+    config)
+        [[ $# -eq 1 ]] || error "config: name one service"
+        compose "$1" config
+        ;;
+    check)
+        ok=0
+        while read -r s; do
+            if out="$(compose "$s" config -q 2>&1)" && [[ -z "$out" ]]; then
+                printf '  ok    %s\n' "$s"
+            else
+                printf '  FAIL  %s\n%s\n' "$s" "$(sed 's/^/        /' <<<"$out")"; ok=1
+            fi
+        done < <(all_services)
+        exit "$ok"
+        ;;
+    compose)
+        [[ $# -ge 1 ]] || error "compose: homelab compose SERVICE ARGS..."
+        compose "$@"
+        ;;
+    list)
+        enabled=" $(enabled_services | tr '\n' ' ') "
+        while read -r s; do
+            state="$(docker ps --filter "label=com.docker.compose.project=$s" -q | wc -l)"
+            flag=$([[ "$enabled" == *" $s "* ]] && echo enabled || echo disabled)
+            printf '%-24s %-9s %s running container(s)\n' "$s" "$flag" "$state"
+        done < <(all_services)
+        ;;
+    nginx)
+        case "${1:-}" in
+            render) render_nginx "${2:-}" ;;
+            install)
+                out="$(render_nginx)"
+                echo "installing into /etc/nginx (sudo):"
+                sudo cp -v "$out"/snippets/*.conf /etc/nginx/snippets/
+                sudo cp -v "$out"/sites-available/*.conf /etc/nginx/sites-available/
+                for f in "$out"/sites-available/*.conf; do
+                    sudo ln -sfn "/etc/nginx/sites-available/$(basename "$f")" "/etc/nginx/sites-enabled/$(basename "$f")"
+                done
+                sudo nginx -t && sudo systemctl reload nginx
+                ;;
+            *) error "nginx render [DIR] | nginx install" ;;
+        esac
+        ;;
+    env)
+        for v in DOMAIN TZ PUID PGID DATA_ROOT MEDIA_ROOT NEXTCLOUD_ROOT LETSENCRYPT_DIR LAN_SUBNET SERVICES; do
+            printf '%-16s %s\n' "$v" "${!v:-}"
+        done
+        for pair in "${HOSTS[@]}"; do v="HOST_${pair%%:*}"; printf '%-16s %s\n' "$v" "${!v}"; done
+        ;;
+    *) error "unknown command: $cmd (homelab help)" ;;
+esac

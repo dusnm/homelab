@@ -1,0 +1,29 @@
+# Navidrome (music streaming, Subsonic API). Public, with Navidrome's own login (no Authelia,
+# so mobile apps work). The first admin comes from ND_ADMIN_USER/ND_ADMIN_PASSWORD in
+# $DATA_ROOT/navidrome/.env.
+services:
+  navidrome:
+    image: deluan/navidrome:0.64.2   # pinned; bump by hand after reading the release notes
+    container_name: navidrome
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    user: "${PUID}:${PGID}"
+    ports:
+      - "127.0.0.1:4533:4533"      # only reachable through nginx
+    environment:
+      TZ: ${TZ}
+      ND_BASEURL: https://${HOST_MUSIC}
+      ND_MUSICFOLDER: /music
+      ND_DATAFOLDER: /data
+      ND_SCANNER_SCHEDULE: "@every 6h"   # full rescan; the file watcher picks up new imports in between
+      ND_SCANNER_WATCHERWAIT: 30s
+      ND_LOGLEVEL: info
+      ND_ENABLEINSIGHTSCOLLECTOR: "false"  # no anonymous usage stats
+      ND_ENABLESHARING: "true"
+      ND_REVERSEPROXYWHITELIST: ""         # no header auth: Navidrome's own login only
+      ND_AUTHREQUESTLIMIT: "5"
+      ND_AUTHWINDOWLENGTH: 20s
+    volumes:
+      - ${DATA_ROOT}/navidrome/data:/data
+      - ${MEDIA_ROOT}/music:/music:ro   # only the importer writes the library

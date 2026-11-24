@@ -1,0 +1,20 @@
+# Mealie (recipes). Sign-up is off: create accounts from the admin page.
+services:
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:v3.31.0
+    container_name: mealie
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    ports:
+      - "127.0.0.1:9925:9000"   # only reachable through nginx
+    environment:
+      TZ: ${TZ}
+      PUID: "${PUID}"
+      PGID: "${PGID}"
+      BASE_URL: https://${HOST_RECIPES}
+      ALLOW_SIGNUP: "false"     # create accounts from the admin page instead
+      MAX_WORKERS: "1"
+      WEB_CONCURRENCY: "1"
+    volumes:
+      - ${DATA_ROOT}/mealie/data:/app/data

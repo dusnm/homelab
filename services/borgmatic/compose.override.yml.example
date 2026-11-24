@@ -1,0 +1,8 @@
+# Copy to $DATA_ROOT/borgmatic/compose.override.yml: the folders to back up, mounted read-only
+# at the same path inside the container (list the same paths in config.yaml).
+services:
+  borgmatic:
+    volumes:
+      - ${DATA_ROOT}:${DATA_ROOT}:ro
+      - ${MEDIA_ROOT}:${MEDIA_ROOT}:ro
+      - ${NEXTCLOUD_ROOT}:${NEXTCLOUD_ROOT}:ro

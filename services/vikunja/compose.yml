@@ -1,0 +1,27 @@
+# Vikunja (tasks). Sign-up is off; create users with:
+#   homelab compose vikunja exec vikunja /app/vikunja/vikunja user create
+services:
+  vikunja:
+    image: vikunja/vikunja:2.8.0   # pinned; bump by hand after reading the release notes
+    container_name: vikunja
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    ports:
+      - "127.0.0.1:8080:3456"
+    env_file:
+      - ${DATA_ROOT}/vikunja/.env    # VIKUNJA_SERVICE_SECRET
+    environment:
+      VIKUNJA_SERVICE_PUBLICURL: https://${HOST_TASKS}/
+      VIKUNJA_SERVICE_TIMEZONE: ${TZ}
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: "false"
+      VIKUNJA_SERVICE_ENABLEEMAILREMINDERS: "false" # no mail server configured
+      VIKUNJA_DATABASE_TYPE: sqlite
+      VIKUNJA_DATABASE_PATH: /db/vikunja.db
+      VIKUNJA_FILES_MAXSIZE: 20MB
+      VIKUNJA_RATELIMIT_ENABLED: "true"
+      VIKUNJA_SERVICE_IPEXTRACTIONMETHOD: xff
+      VIKUNJA_SERVICE_TRUSTEDPROXIES: 172.16.0.0/12,192.168.0.0/16
+    volumes:
+      - ${DATA_ROOT}/vikunja/files:/app/vikunja/files   # attachments
+      - ${DATA_ROOT}/vikunja/db:/db                     # SQLite database

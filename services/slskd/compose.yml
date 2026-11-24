@@ -1,0 +1,22 @@
+# slskd (Soulseek). Web UI behind nginx + Authelia. Shares the music library; completed
+# downloads go to $DATA_ROOT/slskd/data/downloads and are announced to music-importer by
+# webhook. slskd.yml: $DATA_ROOT/slskd/data/slskd.yml (start from slskd.yml.example).
+services:
+  slskd:
+    container_name: soulseek
+    image: 'slskd/slskd:0.26.2'
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    restart: unless-stopped
+    user: "${PUID}:${PGID}"
+    ports:
+      - "127.0.0.1:5030:5030/tcp"
+      - "50300:50300/tcp"         # Soulseek listen port: forward it on your router
+    environment:
+      - UID=${PUID}
+      - GID=${PGID}
+      - SLSKD_REMOTE_CONFIGURATION=false
+      - SLSKD_SHARED_DIR=/music
+    volumes:
+      - ${DATA_ROOT}/slskd/data:/app:rw
+      - ${MEDIA_ROOT}/music:/music:rw

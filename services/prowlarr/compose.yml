@@ -1,0 +1,19 @@
+# Prowlarr (indexer manager). Behind nginx + Authelia.
+services:
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DATA_ROOT}/prowlarr/config:/config
+    ports:
+      - 127.0.0.1:9696:9696
+    networks:
+      - downloads
+    restart: unless-stopped
+networks:
+  downloads:          # shared with Deluge; created by `homelab up`
+    external: true

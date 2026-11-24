@@ -1,0 +1,25 @@
+# Copy to $DATA_ROOT/ps2smb/data/smb.conf. Guest access, SMBv1: LAN only.
+[global]
+    netbios name = homelab
+    server string = Samba Server %v
+    log file = /var/log/samba/%m
+    log level = 1
+    map to guest = Bad User
+    security = user
+    guest ok = yes
+    force user = emu
+    client min protocol = CORE
+    client max protocol = NT1
+    server max protocol = SMB3
+    server min protocol = LANMAN1
+    strict sync = no
+    keepalive = 0
+
+[PS2]
+    comment = PS2 ISOs
+    path = "/srv/ps2"
+    browseable = yes
+    read only = no
+    guest ok = yes
+    public = yes
+    available = yes

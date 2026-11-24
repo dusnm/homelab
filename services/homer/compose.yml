@@ -1,0 +1,19 @@
+# Homer dashboard. Behind nginx + Authelia. Its config.yml lives in $DATA_ROOT/homer/data
+# (start from config.yml.example in this folder).
+networks:
+    default:
+        name: homer
+services:
+    homer-server:
+        container_name: homer_server
+        restart: unless-stopped
+        image: b4bz/homer:latest
+        volumes:
+            - ${DATA_ROOT}/homer/data:/www/assets
+        ports:
+            - "127.0.0.1:5678:8080"
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "200k"
+                max-file: "10"

@@ -1,0 +1,42 @@
+# Beszel: server monitoring (hub + local agent). Behind nginx + Authelia; logs in from
+# Authelia's Remote-Email header. Disks for the SMART tab and extra filesystems are
+# machine-specific: see compose.override.yml.example.
+services:
+  beszel:
+    image: henrygd/beszel:0.21.2   # pinned; bump by hand after reading the release notes
+    container_name: beszel
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    network_mode: host
+    command: ["serve", "--http=127.0.0.1:8090"]
+    env_file:
+      - ${DATA_ROOT}/beszel/.env     # USER_EMAIL / USER_PASSWORD: first user, created on first start only
+    environment:
+      TZ: ${TZ}
+      APP_URL: https://${HOST_MONITOR}
+      TRUSTED_AUTH_HEADER: Remote-Email
+      TRUSTED_PROXY_IPS: 127.0.0.1
+      USER_CREATION: "false"
+      CHECK_UPDATES: "true"
+    volumes:
+      - ${DATA_ROOT}/beszel/data:/beszel_data
+      - ${DATA_ROOT}/beszel/socket:/beszel_socket
+  beszel-agent:
+    image: henrygd/beszel-agent:0.21.2-alpine   # -alpine includes smartctl (SMART tab); keep in step with the hub
+    container_name: beszel-agent
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    network_mode: host             # needed to see the host's real network interfaces
+    env_file:
+      - ${DATA_ROOT}/beszel/agent.env   # KEY: the hub's public SSH key
+    environment:
+      LISTEN: /beszel_socket/beszel.sock
+    volumes:
+      - ${DATA_ROOT}/beszel/agent_data:/var/lib/beszel-agent
+      - ${DATA_ROOT}/beszel/socket:/beszel_socket
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    cap_add:
+      - SYS_RAWIO
+      - SYS_ADMIN

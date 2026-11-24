@@ -1,0 +1,12 @@
+# This machine's settings and anything secret
+homelab.env
+.env
+*.env
+!*.env.example
+!homelab.env.example
+# Rendered output
+build/
+# Editor/backup leftovers
+*.bak*
+*~
+.*.swp

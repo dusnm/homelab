@@ -1,0 +1,15 @@
+# Wastebin (pastebin). WASTEBIN_SIGNING_KEY and the page title: $DATA_ROOT/wastebin/.env.
+services:
+  wastebin:
+    image: 'quxfoo/wastebin:latest'
+    container_name: wastebin
+    restart: unless-stopped
+    user: "${PUID}:${PGID}"
+    environment:
+      - WASTEBIN_TITLE=${WASTEBIN_TITLE:-Paste}
+      - WASTEBIN_DATABASE_PATH=/data/state.db
+      - WASTEBIN_SIGNING_KEY=${WASTEBIN_SIGNING_KEY}
+    ports:
+      - "127.0.0.1:8088:8088"
+    volumes:
+      - ${DATA_ROOT}/wastebin/data:/data

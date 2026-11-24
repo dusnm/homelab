@@ -1,0 +1,39 @@
+# music-importer: tags, names, cover art and lyrics for slskd downloads, inbox drops and
+# Bandcamp purchases (https://github.com/... see MUSIC_IMPORTER_SRC). Settings and secrets:
+# $DATA_ROOT/music-importer/.env. CLI on the host: the project's bin/mi.
+services:
+  music-importer:
+    container_name: music-importer
+    build: ${MUSIC_IMPORTER_SRC}           # a checkout of the music-importer project, or its git URL
+    image: music-importer:${MUSIC_IMPORTER_VERSION:-local}
+    restart: unless-stopped
+    stop_grace_period: 2m   # let a running import job finish on docker stop
+    user: "${PUID}:${PGID}"
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    env_file: ${DATA_ROOT}/music-importer/.env
+    environment:
+      MUSIC_DIR: /music
+      DOWNLOADS_DIR: /downloads
+      DATA_DIR: /data
+      SLSKD_DOWNLOADS_DIR: /app/downloads   # the downloads path as slskd reports it
+      SETTLE_SECONDS: "10"
+      REMOVE_LEFTOVERS: "1"                 # delete the download folder once its audio is imported
+      INBOX_DIR: /inbox                     # drop folder ($MEDIA_ROOT/music-inbox, e.g. over SFTP)
+      INBOX_STABLE_SECONDS: "60"            # import a folder after 60 s without changes
+      REPLACED_DIR: /replaced               # older copies replaced by a newer import (newer wins)
+      REPLACED_KEEP_DAYS: "30"              # ...are deleted after this many days
+      LYRICS: "1"                           # fetch LRCLIB lyrics (.lrc/.txt sidecars) for new imports
+    volumes:
+      - ${DATA_ROOT}/music-importer/data:/data
+      - ${MEDIA_ROOT}/music:/music
+      - ${DATA_ROOT}/slskd/data/downloads:/downloads
+      - ${MEDIA_ROOT}/music-inbox:/inbox
+      - ${MEDIA_ROOT}/music-replaced:/replaced
+      - /etc/localtime:/etc/localtime:ro      # log and note times in local time
+    networks:
+      - slskd
+networks:
+  slskd:                  # slskd's network: it calls the importer's webhook
+    external: true
+    name: slskd_default

@@ -1,0 +1,32 @@
+# Authelia: single sign-on with 2FA in front of the private services (nginx auth_request).
+# Config: configuration.yml in this folder (the domain comes from the environment);
+# users and state: $DATA_ROOT/authelia/config (users.yml, db.sqlite3), secrets: $DATA_ROOT/authelia/secrets.
+services:
+  authelia:
+    image: authelia/authelia:4.39.28   # pinned; bump by hand after reading the release notes
+    container_name: authelia
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    ports:
+      - "127.0.0.1:9091:9091"   # only nginx talks to Authelia
+    environment:
+      TZ: ${TZ}
+      PUID: "${PUID}"
+      PGID: "${PGID}"
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: /secrets/jwt_secret
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: /secrets/storage_encryption_key
+      X_AUTHELIA_CONFIG_FILTERS: template   # lets configuration.yml use {{ env "DOMAIN" }}
+      DOMAIN: ${DOMAIN}
+      HOST_AUTH: ${HOST_AUTH}
+      HOST_HOME: ${HOST_HOME}
+      HOST_SLSKD: ${HOST_SLSKD}
+      HOST_DOWNLOAD: ${HOST_DOWNLOAD}
+      HOST_DELUGE: ${HOST_DELUGE}
+      HOST_PROWLARR: ${HOST_PROWLARR}
+      HOST_MONITOR: ${HOST_MONITOR}
+      HOST_DNS: ${HOST_DNS}
+    volumes:
+      - ${DATA_ROOT}/authelia/config:/config
+      - ${REPO}/services/authelia/configuration.yml:/config/configuration.yml:ro
+      - ${DATA_ROOT}/authelia/secrets:/secrets:ro

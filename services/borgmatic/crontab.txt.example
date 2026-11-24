@@ -1,0 +1,3 @@
+# Copy to $DATA_ROOT/borgmatic/config/crontab.txt
+# Daily backup at 03:30 local time (prune + compact + checks run as part of it)
+30 3 * * * borgmatic-start --stats -v 0 2>&1

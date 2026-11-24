@@ -1,0 +1,26 @@
+# Let's Encrypt wildcard certificate for $DOMAIN via Namecheap DNS (DNS-01), renewed on a
+# timer into $LETSENCRYPT_DIR, where nginx and AdGuard read it. Image source:
+# https://hub.docker.com/r/dusnm1/certbot-namecheap-dns-plugin. Namecheap credentials,
+# your public IP (whitelisted in Namecheap's API settings) and the contact e-mail:
+# $DATA_ROOT/certbot-dns-namecheap/.env.
+services:
+  certbot:
+    image: ${CERTBOT_IMAGE:-dusnm1/certbot-namecheap-dns-plugin:latest}
+    restart: unless-stopped
+    environment:
+      NAMECHEAP_API_USER: ${NAMECHEAP_API_USER}
+      NAMECHEAP_API_KEY: ${NAMECHEAP_API_KEY}
+      NAMECHEAP_USERNAME: ${NAMECHEAP_USERNAME:-}   # defaults to NAMECHEAP_API_USER
+      NAMECHEAP_CLIENT_IP: ${NAMECHEAP_CLIENT_IP}
+      NAMECHEAP_SANDBOX: "false"
+      NAMECHEAP_PROPAGATION_SECONDS: "120"
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL}
+      CERTBOT_CERTS: "${DOMAIN},*.${DOMAIN}"
+      CERTBOT_STAGING: ${CERTBOT_STAGING:-false}   # "true" first, to test against Let's Encrypt staging
+      CERTBOT_KEY_TYPE: ecdsa
+      CERTBOT_RENEW_INTERVAL: 12h
+      CERTBOT_DEPLOY_HOOK: ""
+    volumes:
+      - ${LETSENCRYPT_DIR}:/etc/letsencrypt
+      - ${DATA_ROOT}/certbot-dns-namecheap/lib:/var/lib/letsencrypt
+      - ${DATA_ROOT}/certbot-dns-namecheap/logs:/var/log/letsencrypt

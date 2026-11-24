@@ -1,0 +1,8 @@
+# Copy to $DATA_ROOT/immich/compose.override.yml and adapt.
+services:
+  immich-server:
+    devices:
+      - /dev/dri:/dev/dri   # Intel Quick Sync; enable it in Admin > Video Transcoding
+    volumes:
+      # An external library (read-only), e.g. a Nextcloud user's photos; add it in Admin > External Libraries
+      - /srv/nextcloud/data/alice/files/Photos:/mnt/nextcloud/Photos:ro

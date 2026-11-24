@@ -1,0 +1,9 @@
+# Copy to $DATA_ROOT/beszel/compose.override.yml and list this machine's disks.
+services:
+  beszel-agent:
+    volumes:
+      # Extra filesystems: mount a folder of each one at /extra-filesystems/<name> (usage + I/O)
+      - /mnt/data/.beszel:/extra-filesystems/sda1:ro
+    devices:                     # SMART data per disk
+      - /dev/sda:/dev/sda
+      - /dev/nvme0:/dev/nvme0

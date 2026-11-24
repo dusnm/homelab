@@ -1,0 +1,10 @@
+# Copy to $DATA_ROOT/searxng/data/settings.yml. Everything not set here keeps SearXNG's defaults.
+use_default_settings: true
+general:
+  instance_name: "searxng"
+server:
+  secret_key: "change-me"      # openssl rand -hex 32
+  limiter: false               # behind your own reverse proxy, for your own use
+  image_proxy: false
+redis:
+  url: false                   # or redis://redis:6379/0 to use the Valkey service (needed for the limiter)

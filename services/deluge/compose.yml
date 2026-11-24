@@ -1,0 +1,24 @@
+# Deluge (BitTorrent). Web UI behind nginx + Authelia; downloads into $MEDIA_ROOT.
+services:
+  deluge:
+    image: lscr.io/linuxserver/deluge:latest
+    container_name: deluge
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DELUGE_LOGLEVEL=error
+    volumes:
+      - ${DATA_ROOT}/deluge/config:/config
+      - ${MEDIA_ROOT}:/data
+    networks:
+      - downloads
+    ports:
+      - 127.0.0.1:8112:8112
+      - 6881:6881
+      - 6881:6881/udp
+      - 58846:58846
+    restart: unless-stopped
+networks:
+  downloads:          # shared with Prowlarr; created by `homelab up`
+    external: true

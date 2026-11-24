@@ -1,0 +1,27 @@
+# Euro-Office document server (editing in Nextcloud). JWT_SECRET in $DATA_ROOT/euro-office/.env,
+# the same value as in Nextcloud's office app settings.
+services:
+  euro-office:
+    container_name: euro-office
+    image: ghcr.io/euro-office/documentserver:v9.3.8
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9981:80"
+    environment:
+      - JWT_ENABLED=true
+      - JWT_SECRET=${JWT_SECRET}
+      - ALLOW_PRIVATE_IP_ADDRESS=true
+      - NGINX_CLIENT_MAX_BODY_SIZE=1024m
+      - MAX_FILE_SIZE=1073741824
+    volumes:
+      - data:/var/lib/euro-office/documentserver
+      - logs:/var/log/euro-office/documentserver
+      - config:/etc/euro-office/documentserver
+      - private:/var/www/euro-office/Data
+      - fonts:/usr/share/fonts/custom
+volumes:
+  data:
+  logs:
+  config:
+  private:
+  fonts:

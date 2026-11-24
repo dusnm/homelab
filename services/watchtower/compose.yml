@@ -1,0 +1,11 @@
+# Watchtower: updates containers whose image tag moved (e.g. :latest). Services pinned to a
+# version carry the label com.centurylinklabs.watchtower.enable=false and are skipped.
+services:
+  watchtower:
+    container_name: watchtower
+    image: "containrrr/watchtower"
+    restart: unless-stopped
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    environment:
+      - WATCHTOWER_CLEANUP=true

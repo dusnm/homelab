@@ -1,0 +1,18 @@
+# Copy to $DATA_ROOT/slskd/data/slskd.yml. The full reference with every option:
+# https://github.com/slskd/slskd/blob/master/config/slskd.example.yml
+# Shares: the music library (SLSKD_SHARED_DIR in compose.yml). Downloads: /app/downloads,
+# i.e. $DATA_ROOT/slskd/data/downloads. The web UI's own login is slskd/slskd unless you set
+# web.authentication; here it sits behind Authelia.
+soulseek:
+  username: your-soulseek-name
+  password: your-soulseek-password
+integrations:
+  webhooks:
+    music_importer:            # hands every completed album folder to music-importer
+      on:
+        - DownloadDirectoryComplete
+      call:
+        url: http://music-importer:8080/webhook
+      timeout: 5000
+      retry:
+        attempts: 3

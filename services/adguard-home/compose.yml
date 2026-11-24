@@ -1,0 +1,11 @@
+# AdGuard Home: DNS for the LAN. Admin UI behind nginx + Authelia (nginx/sites/dns.conf).
+services:
+  adguard-home:
+    container_name: adguard-home
+    image: adguard/adguardhome:latest
+    restart: unless-stopped
+    network_mode: host               # answers DNS on the host's port 53
+    volumes:
+      - ${DATA_ROOT}/adguard-home/data/work:/opt/adguardhome/work
+      - ${DATA_ROOT}/adguard-home/data/conf:/opt/adguardhome/conf
+      - ${LETSENCRYPT_DIR}:/etc/letsencrypt:ro   # for DNS-over-HTTPS/TLS with your certificate
