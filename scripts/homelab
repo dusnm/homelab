@@ -67,6 +67,7 @@ all_services() {
         d="${d%/}"
         [[ -f "$d/compose.yml" ]] && basename "$d"
     done
+    return 0
 }
 
 is_service() { [[ -f "$REPO/services/$1/compose.yml" ]]; }
@@ -87,6 +88,7 @@ enabled_services() {
     for late in "${LATE[@]}"; do
         for s in "${list[@]}"; do [[ "$s" == "$late" ]] && echo "$s"; done
     done
+    return 0
 }
 
 compose() {
