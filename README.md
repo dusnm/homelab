@@ -31,7 +31,7 @@ service folder, as with plain `docker-compose`.
 
 - Linux with Docker and docker-compose (v1.29 or the v2 plugin), bash, envsubst (gettext-base)
 - nginx on the host, and a domain whose DNS you control (wildcard `*.example.com` record to
-  this machine). The certificate comes from `certbot-dns-namecheap` (Namecheap DNS); with
+  this machine). The certificate comes from [certbot-dns-namecheap](https://github.com/dusnm/certbot-dns-namecheap) (Namecheap DNS); with
   another DNS provider, use a matching certbot DNS plugin instead.
 
 ## Setup
