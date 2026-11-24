@@ -16,3 +16,10 @@ integrations:
       timeout: 5000
       retry:
         attempts: 3
+web:
+  authentication:
+    api_keys:
+      music_importer:          # for `mi slskd` (search and queue from the command line)
+        key: change-me-to-32-or-more-random-characters   # openssl rand -hex 32
+        role: readwrite
+        cidr: 192.168.0.0/20   # the slskd_default Docker network (docker network inspect slskd_default)
