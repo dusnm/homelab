@@ -67,7 +67,7 @@ then `homelab nginx install`.
 | cloudflared | - | host network | Cloudflare Tunnel |
 | deluge | `HOST_DELUGE` | 8112 | Authelia |
 | euro-office | `HOST_OFFICE` | 9981 | JWT (Nextcloud) |
-| homer | `HOST_HOME` | 5678 | Authelia |
+| homer | `HOST_HOME` (the bare domain) | 5678 | Authelia |
 | immich | `HOST_PHOTOS` | 2283 | own login |
 | mealie | `HOST_RECIPES` | 9925 | own login |
 | metube | `HOST_DOWNLOAD` | 8081 | Authelia |
@@ -83,7 +83,7 @@ then `homelab nginx install`.
 | wastebin | `HOST_PASTE` | 8088 | open |
 | watchtower | - | - | updates unpinned images |
 
-Host names default to `<name>.$DOMAIN` (see `homelab.env.example`). Every web app listens on
+Host names default to `<name>.$DOMAIN`, and Homer to `$DOMAIN` itself (see `homelab.env.example`). Every web app listens on
 127.0.0.1 only; nginx publishes it. Apps marked "Authelia" are listed in
 `services/authelia/configuration.yml` and get 2FA in front of them; everything else not listed
 there is refused by Authelia (`default_policy: deny`).
@@ -116,7 +116,7 @@ and `${LETSENCRYPT_DIR}`, copies them to `/etc/nginx/sites-available`, enables t
 `$LETSENCRYPT_DIR/live/$DOMAIN/` and certbot's `options-ssl-nginx.conf` and
 `ssl-dhparams.pem` in `$LETSENCRYPT_DIR`. `private.conf` holds the Authelia-protected apps;
 `authelia-location.conf` and `authelia-authrequest.conf` in `snippets/` wire them up.
-`root.conf` serves a static page for the bare domain from `/var/www/html/rootfs`.
+The bare domain is the Homer dashboard (`HOST_HOME`), behind Authelia like the other private apps.
 
 ## Machine-specific additions
 

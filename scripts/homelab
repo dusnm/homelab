@@ -21,8 +21,9 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 ENV_FILE="${HOMELAB_ENV:-$REPO/homelab.env}"
 # Start order: shared networks and databases first, things that join their networks last.
+# HOSTS: default host name per HOST_* variable ("@" = the bare domain).
 LATE=(music-importer borgmatic)
-HOSTS=(AUTH:auth HOME:homer MUSIC:music PHOTOS:photos CLOUD:cloud DOCS:docs RECIPES:recipes
+HOSTS=(AUTH:auth HOME:@ MUSIC:music PHOTOS:photos CLOUD:cloud DOCS:docs RECIPES:recipes
        TASKS:tasks SEARCH:search PASTE:paste OFFICE:office MACROS:macros DNS:dns
        MONITOR:monitor DOWNLOAD:download SLSKD:slskd DELUGE:deluge PROWLARR:prowlarr)
 SHARED_NETWORKS=(downloads)   # created here; services declare them external
@@ -57,7 +58,9 @@ load_settings() {
     for pair in "${HOSTS[@]}"; do
         var="HOST_${pair%%:*}"
         sub="${pair#*:}"
-        [[ -n "${!var:-}" ]] || export "$var=$sub.$DOMAIN"
+        if [[ -z "${!var:-}" ]]; then
+            if [[ "$sub" == "@" ]]; then export "$var=$DOMAIN"; else export "$var=$sub.$DOMAIN"; fi
+        fi
     done
 }
 
